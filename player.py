@@ -32,6 +32,22 @@ class Player(pygame.sprite.Sprite):
         self.moving = False
         self.jump_pressed = False  # Track jump key state
 
+    @property
+    def x(self):
+        return self.rect.x
+
+    @x.setter
+    def x(self, value):
+        self.rect.x = value
+
+    @property
+    def y(self):
+        return self.rect.y
+
+    @y.setter
+    def y(self, value):
+        self.rect.y = value
+
     def update(self, platforms=None):
         keys = pygame.key.get_pressed()
         dx = 0
