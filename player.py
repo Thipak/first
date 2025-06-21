@@ -48,7 +48,7 @@ class Player(pygame.sprite.Sprite):
     def y(self, value):
         self.rect.y = value
 
-    def update(self, platforms=None):
+    def update(self, platforms=None, base_blocks=None):
         keys = pygame.key.get_pressed()
         dx = 0
         # Run if shift is held
@@ -80,9 +80,13 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += dx
         if platforms:
             self.check_collision(dx, 0, platforms)
+        if base_blocks:
+            self.check_collision(dx, 0, base_blocks)
         self.rect.y += dy
         if platforms:
             self.check_collision(0, dy, platforms)
+        if base_blocks:
+            self.check_collision(0, dy, base_blocks)
         # Animation
         if self.moving and self.on_ground:
             self.animation_timer += self.animation_speed

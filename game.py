@@ -17,8 +17,8 @@ class Game:
         self.running = True
 
         # Add base buildings for both teams
-        self.user_base = BaseBuilding(20, 450, 60, 100, health=100)
-        self.enemy_base = BaseBuilding(self.width - 80, 450, 60, 100, health=100)
+        self.user_base = BaseBuilding(20, 350, 60, 200, health=100)  # Taller building
+        self.enemy_base = BaseBuilding(self.width - 80, 350, 60, 200, health=100)  # Taller building
         self.attack_cooldown = 0  # Cooldown for attack animation
         self.attack_animation_time = 15  # Frames for attack animation
         self.attacking = False
@@ -44,7 +44,8 @@ class Game:
             self.screen.blit(user_hp_text, (self.user_base.rect.centerx - user_hp_text.get_width() // 2, self.user_base.rect.top - 30))
             self.screen.blit(enemy_hp_text, (self.enemy_base.rect.centerx - enemy_hp_text.get_width() // 2, self.enemy_base.rect.top - 30))
             # Update and draw player
-            self.player.update(self.platforms)
+            base_blocks = [self.enemy_base.rect]  # Only enemy base blocks the player
+            self.player.update(self.platforms, base_blocks)
             self.player.draw(self.screen)
 
             # Player can go past own base, but not enemy base
