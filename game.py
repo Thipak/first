@@ -1,7 +1,7 @@
 import pygame
-
 from player import Player  # Assuming player.py is in the same directory
 from Buildings.base import BaseBuilding  # Import BaseBuilding
+from Troops.trooper import Trooper  # Import Trooper
 
 class Game:
     def __init__(self, width, height):
@@ -24,6 +24,16 @@ class Game:
         self.attacking = False
         self.has_collided = False  # Track if collision is ongoing
         self.font = pygame.font.SysFont(None, 32)  # Font for hitpoints
+        self.respawn_timer = 0  # Timer for respawn
+        self.spawn_point = (self.user_base.rect.right + 10, self.user_base.rect.bottom - self.player.rect.height)  # Right side of user base
+
+        # Trooper group and spawn timer
+        self.trooper_group = pygame.sprite.Group()
+        self.enemy_trooper_group = pygame.sprite.Group()
+        self.trooper_spawn_timer = pygame.time.get_ticks()
+        self.trooper_spawn_interval = 5000  # 5 seconds
+        self.enemy_trooper_spawn_timer = pygame.time.get_ticks()
+        self.enemy_trooper_spawn_interval = 5000
 
     def run(self):
         while self.running:
@@ -46,7 +56,7 @@ class Game:
             # Update and draw player
             base_blocks = [self.enemy_base.rect]  # Only enemy base blocks the player
             self.player.update(self.platforms, base_blocks)
-            self.player.draw(self.screen)
+            self.player.draw(self.screen, font=self.font)
 
             # Player can go past own base, but not enemy base
             player_rect = self.player.rect
@@ -73,6 +83,42 @@ class Game:
                 if self.attack_cooldown == 0:
                     self.attacking = False
 
+            # Enemy base fires at player if in range
+            fire_range = 350
+            player_center = self.player.rect.centerx
+            enemy_center = self.enemy_base.rect.centerx
+            if abs(player_center - enemy_center) < fire_range:
+                player_pos = self.player.rect.center
+                self.enemy_base.shoot(direction=-1, target_pos=player_pos)
+
+            # Update base projectiles
+            self.user_base.update()
+            self.enemy_base.update()
+
+            # Check collision between enemy projectiles and player
+            for proj in self.enemy_base.projectiles:
+                if self.player.rect.colliderect(proj.rect):
+                    self.player.take_damage(proj.damage)
+                    proj.kill()
+
+            # Handle player death and respawn
+            if self.player.is_dead():
+                if not self.player.is_hidden():
+                    self.player.hide()
+                if self.respawn_timer == 0:
+                    self.respawn_timer = pygame.time.get_ticks()
+                # Draw 'You Died' message
+                font = pygame.font.SysFont(None, 64)
+                text = font.render("You Died!", True, (255, 0, 0))
+                self.screen.blit(text, (self.width // 2 - text.get_width() // 2, self.height // 2 - text.get_height() // 2))
+                pygame.display.flip()
+                # Wait for 2 seconds before respawn
+                if pygame.time.get_ticks() - self.respawn_timer > 2000:
+                    self.player.respawn(*self.spawn_point)
+                    self.respawn_timer = 0
+                self.clock.tick(60)
+                continue
+
             # Game over check
             if self.user_base.is_destroyed() or self.enemy_base.is_destroyed():
                 font = pygame.font.SysFont(None, 72)
@@ -85,6 +131,33 @@ class Game:
                 pygame.time.wait(2000)
                 self.running = False
                 continue
+
+            # Spawn troopers every 5 seconds if building exists
+            if not self.user_base.is_destroyed():
+                now = pygame.time.get_ticks()
+                if now - self.trooper_spawn_timer > self.trooper_spawn_interval:
+                    trooper = Trooper(self.user_base.rect.right + 10, self.user_base.rect.bottom - 20, direction=1)
+                    self.trooper_group.add(trooper)
+                    self.trooper_spawn_timer = now
+            # Spawn enemy troopers every 5 seconds if building exists
+            if not self.enemy_base.is_destroyed():
+                now = pygame.time.get_ticks()
+                if now - self.enemy_trooper_spawn_timer > self.enemy_trooper_spawn_interval:
+                    enemy_trooper = Trooper(self.enemy_base.rect.left - 10, self.enemy_base.rect.bottom - 20, direction=-1)
+                    self.enemy_trooper_group.add(enemy_trooper)
+                    self.enemy_trooper_spawn_timer = now
+            # Update and draw troopers
+            for trooper in self.trooper_group:
+                trooper.update([], list(self.enemy_trooper_group) + [self.enemy_base, self.player], ignore_player=True)
+                trooper.draw(self.screen)
+            for trooper in self.enemy_trooper_group:
+                trooper.update([], list(self.trooper_group) + [self.user_base, self.player], ignore_player=False)
+                trooper.draw(self.screen)
+
+            # Player damages only enemy troopers on collision
+            for trooper in self.enemy_trooper_group:
+                if self.player.rect.colliderect(trooper.rect):
+                    trooper.take_damage(10)  # Player inflicts 10 damage per collision
 
             pygame.display.flip()  # Update the display
             self.clock.tick(60)  # Limit to 60 FPS

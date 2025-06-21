@@ -31,6 +31,9 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
         self.moving = False
         self.jump_pressed = False  # Track jump key state
+        self.max_health = 100
+        self.health = self.max_health
+        self.is_player = True  # Attribute to identify player objects
 
     @property
     def x(self):
@@ -122,7 +125,30 @@ class Player(pygame.sprite.Sprite):
                 elif dx < 0:  # Moving left
                     self.rect.left = platform.right
 
-    def draw(self, surface):
+    def draw(self, surface, font=None):
         surface.blit(self.image, self.rect)
+        if font is not None:
+            hp_text = font.render(f"HP: {self.health}", True, (255, 255, 255))
+            surface.blit(hp_text, (self.rect.centerx - hp_text.get_width() // 2, self.rect.top - 30))
+
+    def take_damage(self, amount):
+        self.health -= amount
+        if self.health < 0:
+            self.health = 0
+
+    def is_dead(self):
+        return self.health <= 0
+
+    def respawn(self, spawn_x, spawn_y):
+        self.health = self.max_health
+        self.rect.topleft = (spawn_x, spawn_y)
+        self.vel_y = 0
+        self.on_ground = False
+
+    def hide(self):
+        self.rect.topleft = (-1000, -1000)
+
+    def is_hidden(self):
+        return self.rect.x == -1000 and self.rect.y == -1000
 
 

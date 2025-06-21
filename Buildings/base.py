@@ -30,8 +30,14 @@ class BaseBuilding(pygame.sprite.Sprite):
     def is_destroyed(self):
         return self.health == 0
 
-    def shoot(self, direction):
+    def shoot(self, direction, target_pos=None):
         if self.shoot_cooldown == 0:
-            proj = Projectile(self.rect.centerx, self.rect.centery, direction)
+            # Fire from the edge of the building, not the center
+            if direction == 1:
+                x = self.rect.right + 6  # 6 is half projectile width
+            else:
+                x = self.rect.left - 6
+            y = self.rect.centery
+            proj = Projectile(x, y, direction, target_pos=target_pos)
             self.projectiles.add(proj)
             self.shoot_cooldown = self.shoot_interval
